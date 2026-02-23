@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QUEST-LOGS</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --anime-primary: #ff0055;
+        --anime-secondary: #00e5ff;
+        --bg-dark: #1a1a2e;
+        --panel-bg: #16213e;
+        --text-color: #ffffff;
+    }
+
+    body {
+        background-color: var(--bg-dark);
+        color: var(--text-color);
+        font-family: 'Press Start 2P', cursive;
+        image-rendering: pixelated;
+        margin: 0;
+    }
+
+    /* Pixel Font is naturally very large, so we scale base down */
+    .pixel-text { font-size: 10px; line-height: 1.6; }
+    .pixel-text-sm { font-size: 8px; }
+    .pixel-title { font-size: 18px; text-shadow: 2px 2px 0px #000; }
+    
+    .retro-panel {
+        background: var(--panel-bg);
+        border: 4px solid var(--anime-primary);
+        box-shadow: 8px 8px 0px var(--anime-secondary);
+        position: relative;
+    }
+
+    .retro-btn {
+        background: var(--anime-primary);
+        color: white;
+        border: 2px solid white;
+        font-family: 'Press Start 2P', cursive;
+        padding: 10px;
+        cursor: pointer;
+        box-shadow: 4px 4px 0px #000;
+        transition: transform 0.1s, box-shadow 0.1s;
+        font-size: 10px;
+    }
+
+    .retro-btn:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px #000;
+    }
+
+    .retro-btn-alt {
+        background: var(--anime-secondary);
+        color: #000;
+        border: 2px solid #000;
+    }
+
+    .retro-btn-fail {
+        background: #333;
+        color: #ff5555;
+    }
+
+    .retro-input {
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid var(--anime-secondary);
+        color: white;
+        font-family: 'Press Start 2P', cursive;
+        text-shadow: 2px 2px 0px #000;
+    }
+    .retro-input:focus { outline: none; border-bottom: 2px solid var(--anime-primary); }
+
+    .retro-bar-container {
+        background: #000;
+        border: 2px solid var(--anime-secondary);
+        height: 16px;
+        width: 100%;
+    }
+
+    .habit-card {
+        border: 2px solid var(--anime-secondary);
+        background: rgba(0,0,0,0.3);
+        transition: 0.2s;
+    }
+    .habit-card:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0px var(--anime-secondary); }
+    .dead-overlay { filter: grayscale(1) sepia(0.5) hue-rotate(-50deg); }
+</style>
+</head>
+
+<body class="min-h-screen p-4 md:p-8">
+<div class="max-w-6xl mx-auto">
+
+<div class="flex justify-between items-end mb-10 flex-wrap gap-4">
+    <div>
+        <h1 class="pixel-title text-3xl mb-2 flex items-center gap-3"><span class="text-4xl drop-shadow-[2px_2px_0px_#00e5ff]">🗡️</span> QUESTLOGS!</h1>
+        <p class="pixel-text text-[var(--anime-secondary)]">By Lukas♥</p>
+    </div>
+
+    <div class="flex gap-3 flex-wrap">
+        <button onclick="copyLink()" class="retro-btn">Share</button>
+        <button onclick="compareFriend()" class="retro-btn retro-btn-alt">Compare</button>
+        <button onclick="resetAll()" class="retro-btn retro-btn-fail">Reset</button>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-10">
+
+<div class="lg:col-span-4 retro-panel p-6">
+    <div id="avatar" onclick="changeAvatar()" title="Change avatar!" class="text-7xl text-center mb-6 cursor-pointer hover:scale-110 drop-shadow-[4px_4px_0px_#000] transition-transform">🛡️</div>
+    <input id="charName" onblur="saveCharacterName()" class="retro-input text-xl text-center w-full pb-2 mb-8" value="Hero">
+
+    <div class="space-y-6 pixel-text">
+        <div>
+            <div class="flex justify-between mb-2">
+                <span>Lv <span id="level" class="text-[var(--anime-secondary)]"></span></span>
+                <span id="xpText"></span>
+            </div>
+            <div class="retro-bar-container">
+                <div id="xpBar" class="h-full bg-[var(--anime-secondary)] w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+
+        <div>
+            <div class="flex justify-between mb-2">
+                <span>HP</span>
+                <span id="hpText" class="text-[var(--anime-primary)]"></span>
+            </div>
+            <div class="retro-bar-container">
+                <div id="hpBar" class="h-full bg-[var(--anime-primary)] w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-4 border-t-2 border-[var(--anime-secondary)] mt-4">
+            <span class="text-2xl drop-shadow-[2px_2px_0px_#000]">🪙</span>
+            <span id="gold" class="text-xl text-yellow-400 text-shadow"></span>
+        </div>
+
+        <div class="text-[var(--anime-secondary)]">
+            Power: <span id="powerScore" class="text-white"></span>
+        </div>
+    </div>
+
+    <button onclick="showShop()" class="mt-8 w-full retro-btn" style="background: #ffaa00;">Visit Shop</button>
+</div>
+
+<div class="lg:col-span-8 retro-panel p-6">
+    <div class="flex justify-between items-center mb-8 border-b-4 border-[var(--anime-primary)] pb-4">
+        <h2 class="pixel-title text-xl">Your Quests</h2>
+        <button onclick="addHabit()" class="retro-btn retro-btn-alt">New Quest</button>
+    </div>
+    <div id="habitsList" class="space-y-4"></div>
+</div>
+</div>
+</div>
+
+<div id="shopModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+<div class="retro-panel p-8 max-w-md w-full m-4">
+    <h3 class="pixel-title text-center mb-8 text-xl">Shop</h3>
+    <div id="shopItems" class="space-y-4 pixel-text"></div>
+    <button onclick="hideShop()" class="mt-8 w-full retro-btn">Close</button>
+</div>
+</div>
+
+<div id="qrModal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+<div class="retro-panel p-8 text-center m-4">
+    <h3 class="pixel-title mb-6">Scan to Share</h3>
+    <div class="bg-white p-2 inline-block border-4 border-black mb-6">
+        <canvas id="qrCanvas"></canvas>
+    </div>
+    <button onclick="hideQR()" class="w-full retro-btn">Close</button>
+</div>
+</div>
+
+<script>
+let data={version:3,character:{name:"Hero",level:1,xp:0,hp:50,maxHp:50,gold:25},habits:[],lastProcessed:""};
+const shopItems=[
+{id:1,name:"Health Potion",desc:"+25 HP",cost:40,action:()=>{data.character.hp=Math.min(data.character.maxHp,data.character.hp+25);}},
+{id:2,name:"XP Elixir",desc:"+60 XP",cost:65,action:()=>{gainXP(60);}},
+{id:3,name:"Iron Shield",desc:"+15 Max HP",cost:120,action:()=>{data.character.maxHp+=15;data.character.hp+=15;}}
+];
+
+function checksum(str){let h=0;for(let i=0;i<str.length;i++){h=Math.imul(31,h)+str.charCodeAt(i)|0;}return h.toString(36);}
+function compress(s){return LZString.compressToEncodedURIComponent(s);}
+function decompress(s){return LZString.decompressFromEncodedURIComponent(s);}
+
+function save(){
+const payload=JSON.stringify(data);
+const sig=checksum(payload);
+const bundle={p:payload,s:sig};
+history.replaceState(null,null,'#'+compress(JSON.stringify(bundle)));
+localStorage.setItem('hashquest',JSON.stringify(bundle));
+}
+
+function saveCharacterName() {
+    data.character.name = document.getElementById('charName').value;
+    save();
+}
+
+function changeAvatar() {
+    if(isDead()) { alert("Ghosts can't change outfits! 👻"); return; }
+    const currentAvatar = data.character.customAvatar || "😎";
+    const newAvatar = prompt("Enter a new emoji:", currentAvatar);
+    if(newAvatar && newAvatar.trim().length <= 5) {
+        data.character.customAvatar = newAvatar.trim();
+        save(); render();
+    }
+}
+
+function load(){
+let source=null;
+try{
+if(location.hash.length>1){
+const bundle=JSON.parse(decompress(location.hash.slice(1)));
+if(bundle&&bundle.p&&bundle.s){
+if(checksum(bundle.p)!==bundle.s){alert("⚠️ Save modified");}
+else source=JSON.parse(bundle.p);
+}
+}
+}catch{}
+if(!source&&localStorage.getItem('hashquest')){
+try{
+const bundle=JSON.parse(localStorage.getItem('hashquest'));
+if(checksum(bundle.p)===bundle.s) source=JSON.parse(bundle.p);
+}catch{}
+}
+if(source)data=source;
+
+const today=new Date().toISOString().split('T')[0];
+if(data.lastProcessed!==today){
+const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+data.habits.forEach(h=>{
+if(h.type==='daily'&&h.lastCompleted!==yesterday&&h.lastFailed!==yesterday){
+const dmg=10*(h.difficulty||1);
+data.character.hp=Math.max(0,data.character.hp-dmg);
+h.streak=0;
+}
+});
+data.lastProcessed=today;
+}
+save();
+}
+
+function isDead(){return data.character.hp<=0;}
+
+function gainXP(a){
+data.character.xp+=a;
+while(data.character.xp>=data.character.level*120){
+data.character.xp-=data.character.level*120;
+data.character.level++;
+data.character.maxHp+=12;
+data.character.hp=data.character.maxHp;
+confettiBurst();
+}
+}
+
+function getPowerScore(){
+return data.character.level*100+data.character.gold+data.character.maxHp+data.habits.reduce((a,h)=>a+(h.streak||0)*5,0);
+}
+
+function render(){
+document.body.classList.toggle('dead-overlay',isDead());
+document.getElementById('charName').value=data.character.name;
+document.getElementById('level').textContent=data.character.level;
+const xpNeeded=data.character.level*120;
+document.getElementById('xpText').textContent=`${data.character.xp}/${xpNeeded}`;
+document.getElementById('xpBar').style.width=`${(data.character.xp/xpNeeded)*100}%`;
+document.getElementById('hpText').textContent=`${data.character.hp}/${data.character.maxHp}`;
+document.getElementById('hpBar').style.width=`${(data.character.hp/data.character.maxHp)*100}%`;
+document.getElementById('gold').textContent=data.character.gold;
+document.getElementById('powerScore').textContent=getPowerScore();
+
+const avatarEl=document.getElementById('avatar');
+if(isDead()) avatarEl.textContent='☠️';
+else if (data.character.customAvatar) avatarEl.textContent = data.character.customAvatar;
+else if(data.character.level>=10) avatarEl.textContent='🐉';
+else if(data.character.level>=5) avatarEl.textContent='🧙';
+else avatarEl.textContent='🛡️';
+
+const container=document.getElementById('habitsList');
+container.innerHTML='';
+data.habits.forEach((h,i)=>{
+const today=new Date().toISOString().split('T')[0];
+const doneToday=h.lastCompleted===today;
+const failedToday=h.lastFailed===today;
+
+let buttonsHtml = '';
+if(doneToday) {
+    buttonsHtml = `<button class="retro-btn opacity-50 cursor-not-allowed" style="transform: translate(2px,2px); box-shadow: 2px 2px 0px #000;">✓ DONE</button>`;
+} else if (failedToday) {
+    buttonsHtml = `<button class="retro-btn retro-btn-fail opacity-80 cursor-not-allowed" style="transform: translate(2px,2px); box-shadow: 2px 2px 0px #000;">❌ FAIL</button>`;
+} else {
+    buttonsHtml = `
+    <div class="flex flex-col sm:flex-row gap-2">
+        <button onclick="toggleComplete(${i})" class="retro-btn" style="background:#00e5ff; color:#000;">Mark Done</button>
+        <button onclick="failHabit(${i})" class="retro-btn retro-btn-fail">Can't Do It</button>
+    </div>`;
+}
+
+const div=document.createElement('div');
+div.className='habit-card p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4';
+div.innerHTML = `
+<div class="flex items-center gap-4">
+    <span class="text-3xl drop-shadow-[2px_2px_0px_#000]">${h.type==='daily'?'📅':h.type==='positive'?'✅':'☠️'}</span>
+    <div>
+        <p class="pixel-text text-[12px] text-white mb-1 text-shadow">${h.name}</p>
+        
+        ${h.note ? `<p class="pixel-text-sm text-zinc-400 mb-2 normal-case leading-relaxed" style="font-family: sans-serif;">${h.note}</p>` : ''}
+        
+        <p class="pixel-text-sm text-[var(--anime-secondary)]">Streak: ${h.streak} 🔥</p>
+    </div>
+</div>
+<div class="flex items-center gap-3 w-full md:w-auto justify-end">
+    ${buttonsHtml}
+    <button onclick="deleteHabit(${i})" class="text-zinc-500 hover:text-[var(--anime-primary)] ml-2">
+        <i class="fa-solid fa-trash"></i>
+    </button>
+</div>`;
+container.appendChild(div);
+});
+}
+
+function toggleComplete(i){
+if(isDead()){alert("☠️ Defeated.");return;}
+const h=data.habits[i];
+const today=new Date().toISOString().split('T')[0];
+if(h.lastCompleted===today || h.lastFailed===today)return;
+h.lastCompleted=today;
+h.streak=(h.streak||0)+1;
+const reward=10*(h.difficulty||1);
+gainXP(reward);
+data.character.gold+=Math.floor(reward/2);
+save();render();
+}
+
+function failHabit(i){
+if(isDead()){alert("☠️ Defeated.");return;}
+const h=data.habits[i];
+const today=new Date().toISOString().split('T')[0];
+if(h.lastCompleted===today || h.lastFailed===today)return;
+
+if(confirm(`Admit defeat for "${h.name}"? You take damage.`)) {
+    h.lastFailed=today;
+    h.streak=0;
+    const dmg=10*(h.difficulty||1);
+    data.character.hp=Math.max(0,data.character.hp-dmg);
+    const avatarEl=document.getElementById('avatar');
+    const oldIcon = avatarEl.textContent;
+    avatarEl.textContent = '💥';
+    setTimeout(() => { if(!isDead()) avatarEl.textContent = oldIcon; }, 500);
+    save();render();
+}
+}
+
+function addHabit(){
+    const name = prompt("Quest name?"); 
+    if(!name) return;
+    
+    // NEW: Ask for a note (optional)
+    const note = prompt("Any notes or details for this quest? (Leave blank if none)");
+    
+    const type = prompt("Type? (daily/positive/negative)","daily").toLowerCase();
+    const diff = parseInt(prompt("Difficulty (1-3)","2")) || 1;
+    
+    // NEW: Save the 'note' in the habit data object
+    data.habits.push({
+        id: Date.now(), 
+        name: name, 
+        note: note || "", // Saves the note, or an empty string if left blank
+        type: type, 
+        difficulty: diff, 
+        lastCompleted: "", 
+        lastFailed: "", 
+        streak: 0
+    });
+    
+    save(); 
+    render();
+}
+
+function deleteHabit(i){if(confirm("Delete quest?")){data.habits.splice(i,1);save();render();}}
+
+function showShop(){
+const container=document.getElementById('shopItems');
+container.innerHTML='';
+shopItems.forEach(item=>{
+const canBuy=data.character.gold>=item.cost;
+const div=document.createElement('div');
+div.className='flex justify-between items-center p-3 border-2 border-[var(--anime-secondary)] bg-black/50 mb-3';
+div.innerHTML=`
+<div><div class="mb-1 text-[12px] text-[var(--anime-primary)]">${item.name}</div><div class="pixel-text-sm text-zinc-400">${item.desc}</div></div>
+<button ${canBuy?'':'disabled'} onclick="buyItem(${item.id})" class="retro-btn ${canBuy?'':'opacity-50 cursor-not-allowed'}" style="background:#ffaa00;">${item.cost} 🪙</button>`;
+container.appendChild(div);
+});
+document.getElementById('shopModal').classList.remove('hidden');
+}
+
+function buyItem(id){
+const item=shopItems.find(i=>i.id===id);
+if(data.character.gold>=item.cost){
+data.character.gold-=item.cost;
+item.action();
+save();render();hideShop();
+}
+}
+
+function hideShop(){document.getElementById('shopModal').classList.add('hidden');}
+
+function copyLink(){navigator.clipboard.writeText(location.href);alert("Link copied!");}
+
+function showQR(){
+QRCode.toCanvas(document.getElementById('qrCanvas'),location.href,{width:200, margin:0});
+document.getElementById('qrModal').classList.remove('hidden');
+}
+function hideQR(){document.getElementById('qrModal').classList.add('hidden');}
+
+function compareFriend(){
+const link=prompt("Paste friend link:");
+if(!link)return;
+try{
+const hash=link.split('#')[1];
+const bundle=JSON.parse(decompress(hash));
+const friend=JSON.parse(bundle.p);
+const myPower=getPowerScore();
+const friendPower=friend.character.level*100+friend.character.gold+friend.character.maxHp+(friend.habits||[]).reduce((a,h)=>a+(h.streak||0)*5,0);
+alert(`YOUR POWER: ${myPower}\nFRIEND POWER: ${friendPower}`);
+}catch{alert("Invalid link");}
+}
+
+
+function resetAll(){if(confirm("DELETE SAVE DATA?")){localStorage.removeItem('hashquest');location.hash='';location.reload();}}
+
+function confettiBurst(){
+const icons=['✨','⭐','💥','🪙'];
+for(let i=0;i<40;i++){
+setTimeout(()=>{
+const c=document.createElement('div');
+c.style.position='fixed';
+c.style.left=Math.random()*100+'vw';
+c.style.top='-20px';
+c.style.fontSize='24px';
+c.style.zIndex='100';
+c.textContent=icons[Math.floor(Math.random()*icons.length)];
+document.body.appendChild(c);
+let y=-20;
+const anim=setInterval(()=>{
+y+=8+Math.random()*6;
+c.style.top=y+'px';
+c.style.opacity=1-y/800;
+if(y>800){clearInterval(anim);c.remove();}
+},16);
+},i*4);
+}
+}
+
+window.onload=()=>{load();render();};
+</script>
+</body>
+</html>
